@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'login/pages/login_page.dart';
+import 'admin/pages/dashboard_admin.dart';
+import 'empleado/pages/dashboard_empleado.dart';
+import 'residente/pages/dashboard_residente.dart';
+import 'login/pages/seleccionar_registro_page.dart';
+import 'login/pages/verification_code_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,8 +21,7 @@ class MyApp extends StatelessWidget {
         colorScheme: const ColorScheme.light(
           primary: Color(0xFF264653), // AZUL PROFUNDO
           secondary: Color(0xFFE3A78C), // DURAZNO SUAVE
-          background: Color(0xFFF5F5F5), // GRIS CLARO
-          surface: Color(0xFFEDE6E0), // BEIGE SUAVE
+          surface: Color(0xFFF5F5F5), // GRIS CLARO
           onPrimary: Colors.white,
           onSecondary: Color(0xFF2F241F), // MARRON OSCURO
         ),
@@ -63,37 +67,18 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const LoginPage(),
+      initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginPage(),
-        '/seleccionar_registro': (context) => const SimpleSeleccionarRegistro(),
-        '/forgot_password': (context) => const SimpleForgotPassword(),
+        '/admin/dashboard': (context) => const DashboardAdmin(),
+        '/empleados/dashboard': (context) => const DashboardEmpleado(),
+        '/residentes/dashboard': (context) => const DashboardResidente(),
+        '/seleccionar_registro': (context) => const SeleccionarRegistroPage(),
+        '/verificacion_codigo': (context) {
+          final rol = ModalRoute.of(context)!.settings.arguments as String;
+          return VerificacionCodePage(rol: rol);
+        },
       },
-    );
-  }
-}
-
-// Páginas temporales simples
-class SimpleSeleccionarRegistro extends StatelessWidget {
-  const SimpleSeleccionarRegistro({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Seleccionar Registro')),
-      body: const Center(child: Text('Seleccionar Registro - En desarrollo')),
-    );
-  }
-}
-
-class SimpleForgotPassword extends StatelessWidget {
-  const SimpleForgotPassword({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Recuperar Contraseña')),
-      body: const Center(child: Text('Recuperar Contraseña - En desarrollo')),
     );
   }
 }
