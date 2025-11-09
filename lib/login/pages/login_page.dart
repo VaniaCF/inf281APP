@@ -21,8 +21,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _testConnection() async {
-    final result = await LoginService.testConnection();
-    // Test de conexión silencioso
+    await LoginService.testConnection();
   }
 
   Future<void> _login() async {
@@ -90,23 +89,31 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _redirectByRole(int idRol) {
+    String route;
     String roleName;
 
     switch (idRol) {
       case 1:
+        route = '/admin/dashboard';
         roleName = 'Administrador';
         break;
       case 2:
+        route = '/empleados/dashboard';
         roleName = 'Empleado';
         break;
       case 3:
+        route = '/residentes/dashboard';
         roleName = 'Residente';
         break;
       default:
+        route = '/login';
         roleName = 'Desconocido';
     }
 
     if (!mounted) return;
+
+    Navigator.pushReplacementNamed(context, route);
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Bienvenido - Rol: $roleName'),
@@ -254,6 +261,7 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     TextButton(
                       onPressed: () {
+                        // ✅ CORREGIDO: Navegar a la página de selección de registro
                         Navigator.pushNamed(context, '/seleccionar_registro');
                       },
                       child: const Text(
@@ -266,7 +274,14 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.pushNamed(context, '/forgot_password');
+                        // Mantener temporalmente el SnackBar hasta que crees la página
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('Recuperar contraseña - En desarrollo'),
+                            backgroundColor: Colors.blue,
+                          ),
+                        );
                       },
                       child: const Text(
                         '¿Olvidaste tu contraseña?',
