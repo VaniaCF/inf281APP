@@ -68,17 +68,22 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       initialRoute: '/login',
-      routes: {
-        '/login': (context) => const LoginPage(),
-        '/admin/dashboard': (context) => const DashboardAdmin(),
-        '/empleados/dashboard': (context) => const DashboardEmpleado(),
-        '/residentes/dashboard': (context) => const DashboardResidente(),
-        '/seleccionar_registro': (context) => const SeleccionarRegistroPage(),
-        '/verificacion_codigo': (context) {
-          final rol = ModalRoute.of(context)!.settings.arguments as String;
-          return VerificacionCodePage(rol: rol);
-        },
-      },
+  routes: {
+  '/login': (context) => const LoginPage(),
+  '/admin/dashboard': (context) => const DashboardAdmin(),
+  '/verificacion_codigo': (context) {
+    // ✅ MÁS SEGURO AÚN
+    final arguments = ModalRoute.of(context)?.settings.arguments;
+    if (arguments is String) {
+      return VerificacionCodePage(rol: arguments);
+    }
+    // Si no hay argumentos o no son String, redirige al login
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.pushReplacementNamed(context, '/login');
+    });
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+  },
+},
     );
   }
 }
