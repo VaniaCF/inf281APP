@@ -1,261 +1,57 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class AdminService {
-  static const String baseUrl = 'http://10.0.2.2:5000/api'; // Para Android Studio
-  // static const String baseUrl = 'http://localhost:5000/api'; // Para web
-  
-  static String? token; // Variable para almacenar el token
 
-  // Headers comunes
-  static Map<String, String> get headers => {
-    'Content-Type': 'application/json',
-    if (token != null) 'Authorization': 'Bearer $token',
-  };
+class AdminService {
+  static const String baseUrl = 'http://192.168.1.12:5000';
   
-  // ========== MÉTODOS DE AUTENTICACIÓN ==========
-  
-  // Método para login
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  // Verificar si la respuesta es HTML (redirección al login)
+  static bool _isHtmlResponse(http.Response response) {
+    final contentType = response.headers['content-type']?.toLowerCase() ?? '';
+    return contentType.contains('text/html') || 
+           response.body.trim().toLowerCase().startsWith('<!doctype html');
+  }
+
+  // Obtener datos del dashboard con manejo de sesión
+  static Future<Map<String, dynamic>> obtenerDatosDashboard() async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': email, 'password': password}),
-      );
+      print('🔗 Conectando a: $baseUrl/api/dashboard');
       
-      final data = json.decode(response.body);
-      
-      // Guardar token si el login es exitoso
-      if (response.statusCode == 200 && data['token'] != null) {
-        token = data['token'];
-        data['success'] = true;
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/dashboard'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      print('📊 Response status: ${response.statusCode}');
+      print('📊 Content-Type: ${response.headers['content-type']}');
+
+      // Verificar si es HTML (redirección al login)
+      if (_isHtmlResponse(response)) {
+        print('❌ Redirección al login detectada');
+        throw Exception('Sesión expirada o no autenticado');
+      }
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('✅ Datos recibidos correctamente');
+        return data;
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception('No autorizado - Sesión expirada');
       } else {
-        data['success'] = false;
+        throw Exception('Error del servidor: ${response.statusCode}');
       }
-      
-      return data;
+    } on http.ClientException catch (e) {
+      print('❌ Error de conexión: $e');
+      throw Exception('No se pudo conectar al servidor. Verifica que Flask esté ejecutándose en $baseUrl');
+    } on FormatException catch (e) {
+      print('❌ Error de formato: $e');
+      throw Exception('El servidor respondió con formato incorrecto. Posible redirección al login.');
     } catch (e) {
-      return {'error': e.toString(), 'success': false};
+      print('❌ Error inesperado: $e');
+      throw Exception('Error al cargar datos: $e');
     }
   }
-  
-  // Método para cerrar sesión
-  static void logout() {
-    token = null;
-  }
-  
-  // Método para verificar si el usuario está autenticado
-  static bool isAuthenticated() {
-    return token != null;
-  }
-  
-  // ========== MÉTODOS DEL DASHBOARD ==========
-  
-  // Método para obtener datos del dashboard
-  static Future<Map<String, dynamic>> getDashboardData() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/dashboard'),
-        headers: headers,
-      );
-      
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      }
-      return {
-        'total_usuarios': 0,
-        'total_comunicados': 0,
-        'total_pagos': 0,
-        'total_reservas': 0,
-      };
-    } catch (e) {
-      throw Exception('Error fetching dashboard data: $e');
-    }
-  }
-  
-  // ========== MÉTODOS DE USUARIOS ==========
-  
-  // Método para obtener usuarios
-  static Future<List<dynamic>> getUsuarios() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/usuarios'),
-        headers: headers,
-      );
-      
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data;
-      }
-      return [];
-    } catch (e) {
-      throw Exception('Error fetching usuarios: $e');
-    }
-  }
-  
-  // Método para crear usuario
-  static Future<Map<String, dynamic>> crearUsuario(Map<String, dynamic> usuarioData) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/usuarios'),
-        headers: headers,
-        body: json.encode(usuarioData),
-      );
-      
-      return json.decode(response.body);
-    } catch (e) {
-      return {'error': e.toString(), 'success': false};
-    }
-  }
-  
-  // Método para actualizar usuario
-  static Future<Map<String, dynamic>> actualizarUsuario(int id, Map<String, dynamic> usuarioData) async {
-    try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/usuarios/$id'),
-        headers: headers,
-        body: json.encode(usuarioData),
-      );
-      
-      return json.decode(response.body);
-    } catch (e) {
-      return {'error': e.toString(), 'success': false};
-    }
-  }
-  
-  // Método para eliminar usuario
-  static Future<bool> eliminarUsuario(int id) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/usuarios/$id'),
-        headers: headers,
-      );
-      
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
-  }
-  
-  // ========== MÉTODOS DE COMUNICADOS ==========
-  
-  // Método para obtener comunicados
-  static Future<List<dynamic>> getComunicados() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/comunicados'),
-        headers: headers,
-      );
-      
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data;
-      }
-      return [];
-    } catch (e) {
-      throw Exception('Error fetching comunicados: $e');
-    }
-  }
-  
-  // Método para crear comunicados
-  static Future<Map<String, dynamic>> crearComunicado(Map<String, dynamic> comunicadoData) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/comunicados'),
-        headers: headers,
-        body: json.encode(comunicadoData),
-      );
-      
-      return json.decode(response.body);
-    } catch (e) {
-      return {'error': e.toString(), 'success': false};
-    }
-  }
-  
-  // Método para actualizar comunicado
-  static Future<Map<String, dynamic>> actualizarComunicado(int id, Map<String, dynamic> comunicadoData) async {
-    try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/comunicados/$id'),
-        headers: headers,
-        body: json.encode(comunicadoData),
-      );
-      
-      return json.decode(response.body);
-    } catch (e) {
-      return {'error': e.toString(), 'success': false};
-    }
-  }
-  
-  // Método para eliminar comunicado
-  static Future<bool> eliminarComunicado(int id) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/comunicados/$id'),
-        headers: headers,
-      );
-      
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
-  }
-  
-  // ========== MÉTODOS DE PAGOS ==========
-  
-  // Método para obtener pagos
-  static Future<List<dynamic>> getPagos() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/pagos'),
-        headers: headers,
-      );
-      
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data;
-      }
-      return [];
-    } catch (e) {
-      throw Exception('Error fetching pagos: $e');
-    }
-  }
-  
-  // ========== MÉTODOS DE RESERVAS ==========
-  
-  // Método para obtener reservas
-  static Future<List<dynamic>> getReservas() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/reservas'),
-        headers: headers,
-      );
-      
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data;
-      }
-      return [];
-    } catch (e) {
-      throw Exception('Error fetching reservas: $e');
-    }
-  }
-  
-  // ========== MÉTODOS DE VERIFICACIÓN ==========
-  
-  // Método para verificar conexión con el servidor
-  // Método para verificar conexión con el servidor
-static Future<bool> verificarConexion() async {
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/health'),
-      headers: headers,
-    ).timeout(const Duration(seconds: 5)); // ✅ Corrección aquí
-    
-    return response.statusCode == 200;
-  } catch (e) {
-    return false;
-  }
-}
 }

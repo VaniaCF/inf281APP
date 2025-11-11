@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert'; // ✅ AGREGAR ESTE IMPORT
+import 'package:shared_preferences/shared_preferences.dart'; // ✅ AGREGAR ESTE IMPORT
 import '../services/login_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -55,6 +57,9 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (response['success'] == true) {
+        // ✅ GUARDAR SESIÓN - AGREGAR ESTO
+        await _guardarSesion(response['user']);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(response['message']),
@@ -85,6 +90,20 @@ class _LoginPageState extends State<LoginPage> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  // ✅ MÉTODO NUEVO: GUARDAR SESIÓN
+  Future<void> _guardarSesion(Map<String, dynamic> userData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', true);
+      await prefs.setString('user_data', json.encode(userData));
+      
+      print('💾 Sesión guardada para: ${userData['nombre']}');
+      print('👤 Rol: ${userData['rol_nombre']} (ID: ${userData['id_rol']})');
+    } catch (e) {
+      print('❌ Error guardando sesión: $e');
     }
   }
 
@@ -261,7 +280,6 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     TextButton(
                       onPressed: () {
-                        // ✅ CORREGIDO: Navegar a la página de selección de registro
                         Navigator.pushNamed(context, '/seleccionar_registro');
                       },
                       child: const Text(
@@ -274,7 +292,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        // Mantener temporalmente el SnackBar hasta que crees la página
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content:
