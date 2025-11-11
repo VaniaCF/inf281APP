@@ -14,10 +14,11 @@ class _VerificacionCodePageState extends State<VerificacionCodePage> {
   final _emailController = TextEditingController();
   final _codigoController = TextEditingController();
   bool _isLoading = false;
-  String? _correoValidado;
+  // Se eliminó _correoValidado ya que no se usaba
 
   Future<void> _solicitarCodigo() async {
     if (_emailController.text.isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor ingresa tu correo'),
@@ -36,9 +37,10 @@ class _VerificacionCodePageState extends State<VerificacionCodePage> {
       widget.rol,
     );
 
+    if (!mounted) return;
+
     setState(() {
       _isLoading = false;
-      _correoValidado = _emailController.text;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -52,6 +54,7 @@ class _VerificacionCodePageState extends State<VerificacionCodePage> {
 
   Future<void> _validarCodigo() async {
     if (_codigoController.text.isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor ingresa el código'),
@@ -70,6 +73,8 @@ class _VerificacionCodePageState extends State<VerificacionCodePage> {
       widget.rol,
     );
 
+    if (!mounted) return;
+
     setState(() {
       _isLoading = false;
     });
@@ -83,10 +88,12 @@ class _VerificacionCodePageState extends State<VerificacionCodePage> {
       );
 
       // Navegar al formulario de registro correspondiente
-      if (widget.rol == 'empleado') {
-        Navigator.pushReplacementNamed(context, '/register/empleado');
-      } else if (widget.rol == 'Administrador') {
-        Navigator.pushReplacementNamed(context, '/register/admin');
+      if (mounted) {
+        if (widget.rol == 'empleado') {
+          Navigator.pushReplacementNamed(context, '/register/empleado');
+        } else if (widget.rol == 'Administrador') {
+          Navigator.pushReplacementNamed(context, '/register/admin');
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

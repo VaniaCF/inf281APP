@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/login_service.dart';
+import '../services/captcha_widget.dart';
+import '/residente/pages/dashboard_residente.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,11 +15,24 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String _captchaValue = '';
+  String _captchaId = '';
+  bool _isCaptchaValid = false;
 
   @override
   void initState() {
     super.initState();
     _testConnection();
+    _testAuth();
+    // Inicializar valores del CAPTCHA
+    _captchaValue = '';
+    _captchaId = '';
+    _isCaptchaValid = false;
+  }
+
+  Future<void> _testAuth() async {
+    print('🧪 Probando endpoint de auth...');
+    await LoginService.testAuth();
   }
 
   Future<void> _testConnection() async {
@@ -25,11 +40,31 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
+    print('🔐 Intentando login...');
+    print('📧 Email: ${_emailController.text}');
+    print('🔑 Password: ${_passwordController.text}');
+    print('📝 CAPTCHA Value: $_captchaValue');
+    print('🆔 CAPTCHA ID: $_captchaId');
+    print('✅ CAPTCHA Válido: $_isCaptchaValid');
+
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      print('❌ Campos vacíos');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor completa todos los campos'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!_isCaptchaValid) {
+      print('❌ CAPTCHA no válido');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor completa el CAPTCHA correctamente'),
           backgroundColor: Colors.red,
         ),
       );
@@ -44,10 +79,14 @@ class _LoginPageState extends State<LoginPage> {
       final userLogin = UserLogin(
         correo: _emailController.text,
         password: _passwordController.text,
-        captcha: 'TEMPORAL',
+        captcha: _captchaValue,
+        captchaId: _captchaId,
       );
 
+      print('🔄 Llamando a LoginService.login...');
       final response = await LoginService.login(userLogin);
+
+      print('🔍 Login response recibida: $response');
 
       if (!mounted) return;
       setState(() {
@@ -55,26 +94,32 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (response['success'] == true) {
+        print('✅ Login exitoso en Flutter');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['message']),
+            content: Text(response['message'] ?? 'Login exitoso'),
             backgroundColor: const Color(0xFF7A8C6E),
           ),
         );
 
         final userData = response['user'];
         if (userData != null) {
+          print('🔄 Redirigiendo por rol: ${userData['id_rol']}');
           _redirectByRole(userData['id_rol']);
+        } else {
+          print('❌ User data es null');
         }
       } else {
+        print('❌ Login falló: ${response['message']}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['message']),
+            content: Text(response['message'] ?? 'Error desconocido'),
             backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
+      print('❌ Error en _login: $e');
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -102,13 +147,16 @@ class _LoginPageState extends State<LoginPage> {
         roleName = 'Empleado';
         break;
       case 3:
-        route = '/residentes/dashboard';
+        route =
+            '/residente/dashboard'; // ← CORREGIDO: de '/residentes/dashboard' a '/residente/dashboard'
         roleName = 'Residente';
         break;
       default:
         route = '/login';
         roleName = 'Desconocido';
     }
+
+    print('📍 Navegando a: $route');
 
     if (!mounted) return;
 
@@ -195,6 +243,7 @@ class _LoginPageState extends State<LoginPage> {
                             labelText: 'Correo electrónico',
                             prefixIcon: Icon(Icons.email_outlined),
                             hintText: 'usuario@gmail.com',
+                            border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.emailAddress,
                         ),
@@ -218,14 +267,32 @@ class _LoginPageState extends State<LoginPage> {
                                 });
                               },
                             ),
+                            border: const OutlineInputBorder(),
                           ),
+                        ),
+                        const SizedBox(height: 20),
+                        // WIDGET CAPTCHA INTEGRADO
+                        CaptchaWidget(
+                          onCaptchaVerified: (captchaValue, captchaId) {
+                            setState(() {
+                              _captchaValue = captchaValue;
+                              _captchaId = captchaId;
+                            });
+                          },
+                          onValidityChanged: (isValid) {
+                            setState(() {
+                              _isCaptchaValid = isValid;
+                            });
+                          },
                         ),
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
                           height: 54,
                           child: ElevatedButton(
-                            onPressed: _isLoading ? null : _login,
+                            onPressed: (_isLoading || !_isCaptchaValid)
+                                ? null
+                                : _login,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF264653),
                               shape: RoundedRectangleBorder(
@@ -261,7 +328,6 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     TextButton(
                       onPressed: () {
-                        // ✅ CORREGIDO: Navegar a la página de selección de registro
                         Navigator.pushNamed(context, '/seleccionar_registro');
                       },
                       child: const Text(
@@ -274,7 +340,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        // Mantener temporalmente el SnackBar hasta que crees la página
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content:
