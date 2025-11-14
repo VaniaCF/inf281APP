@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import '../services/dashboard_service.dart';
 import '../dashboard_model.dart';
-import '../widgets/menu_residente.dart'; // Importar el menú
+import '../widgets/menu_residente.dart';
+import '../services/reservas_service.dart';
 
 class DashboardResidentePage extends StatefulWidget {
   const DashboardResidentePage({super.key});
@@ -19,13 +20,31 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
   @override
   void initState() {
     super.initState();
-    print('🔄 DashboardResidentePage INIT - Cargando datos...');
     _loadDashboardData();
+    _iniciarDiagnosticoAutomatico();
+  }
+
+  Future<void> _iniciarDiagnosticoAutomatico() async {
+    try {
+      print('🚀 INICIANDO DIAGNÓSTICO AUTOMÁTICO JWT...');
+
+      // Esperar un poco para que la UI se cargue primero
+      await Future.delayed(Duration(seconds: 3));
+
+      // Ejecutar diagnóstico completo
+      await ReservaService.probarConfiguracionJWT();
+      await ReservaService.probarTokenManual();
+      await ReservaService.pruebaDiagnosticoCompleto();
+      await ReservaService.probarDebugTokenDetallado();
+      await ReservaService.probarDebugTokenFormato();
+
+      print('✅ DIAGNÓSTICO JWT COMPLETADO');
+    } catch (e) {
+      print('❌ Error en diagnóstico automático: $e');
+    }
   }
 
   Future<void> _loadDashboardData() async {
-    print('🔍 Llamando a DashboardService.getDashboardData()...');
-
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -35,16 +54,12 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
 
     if (!mounted) return;
 
-    print('🔍 Resultado del dashboard: $result');
-
     setState(() {
       _isLoading = false;
       if (result['success'] == true) {
         _dashboardData = DashboardData.fromJson(result['data'] ?? {});
-        print('✅ Datos del dashboard cargados exitosamente');
       } else {
         _errorMessage = result['message'] ?? 'Error al cargar el dashboard';
-        print('❌ Error cargando dashboard: $_errorMessage');
       }
     });
   }
@@ -66,9 +81,7 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
         ),
       ),
       drawer: MenuResidente(
-        onItemSelected: () {
-          // Puedes agregar lógica adicional aquí si necesitas
-        },
+        onItemSelected: () {},
       ),
       body: _isLoading
           ? _buildLoading()
@@ -126,9 +139,6 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
             onPressed: _loadDashboardData,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF264653),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
             ),
             child: const Text(
               'Reintentar',
@@ -148,17 +158,15 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           _buildHeader(data),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Métricas principales
+          // Métricas principales - CORREGIDO PARA EVITAR OVERFLOW
           _buildMetricsGrid(data),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // Actividad reciente
           _buildRecentActivity(data),
-          // ❌ ELIMINADO: Acciones rápidas - ahora están en el menú
         ],
       ),
     );
@@ -201,7 +209,7 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
             data.usuarioNombre,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 24,
+              fontSize: 22, // Reducido para evitar overflow
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -211,14 +219,6 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
             style: TextStyle(
               color: Colors.white.withOpacity(0.8),
               fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            data.usuarioCorreo,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
-              fontSize: 12,
             ),
           ),
         ],
@@ -231,9 +231,9 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.1,
+      crossAxisSpacing: 10, // Reducido
+      mainAxisSpacing: 10, // Reducido
+      childAspectRatio: 1.0, // Cambiado de 1.1 a 1.0 para más espacio
       children: [
         _buildMetricCard(
           icon: Icons.attach_money,
@@ -247,7 +247,7 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
           icon: Icons.confirmation_number,
           title: 'Solicitudes Activas',
           value: data.solicitudesActivas.toString(),
-          subtitle: '${data.solicitudesPrioridadAlta} de prioridad alta',
+          subtitle: '${data.solicitudesPrioridadAlta} urgentes',
           detail: 'Tickets pendientes',
           color: const Color(0xFFE76F51),
         ),
@@ -263,8 +263,8 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
           icon: Icons.build,
           title: 'Mantenimiento',
           value: 'Sin anuncios',
-          subtitle: 'No hay mantenimientos programados',
-          detail: 'Todo en orden',
+          subtitle: 'Todo en orden',
+          detail: 'Sin programaciones',
           color: const Color(0xFF264653),
         ),
       ],
@@ -286,58 +286,62 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // Reducido padding
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: Icon(icon, color: color, size: 18),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8), // Reducido
             Text(
               title,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11, // Reducido
                 color: Colors.grey,
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2), // Reducido
             Text(
               value,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 16, // Reducido
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF264653),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2), // Reducido
             Text(
               subtitle,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 10, // Reducido
                 color: Colors.grey,
               ),
+              maxLines: 1, // Evitar múltiples líneas
+              overflow: TextOverflow.ellipsis,
             ),
             const Spacer(),
             Text(
               detail,
               style: const TextStyle(
-                fontSize: 10,
+                fontSize: 9, // Reducido
                 color: Colors.grey,
               ),
+              maxLines: 1, // Evitar múltiples líneas
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -354,7 +358,7 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -367,12 +371,12 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
             const Text(
               'Actividad Reciente',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16, // Reducido
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF264653),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             if (data.actividadesRecientes.isEmpty)
               _buildEmptyActivity()
             else
@@ -386,11 +390,11 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
   Widget _buildEmptyActivity() {
     return const Column(
       children: [
-        Icon(Icons.info_outline, color: Colors.grey, size: 40),
+        Icon(Icons.info_outline, color: Colors.grey, size: 32), // Reducido
         SizedBox(height: 8),
         Text(
           'No hay actividades recientes',
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(color: Colors.grey, fontSize: 12), // Reducido
         ),
       ],
     );
@@ -398,23 +402,23 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
 
   Widget _buildActivityItem(ActividadReciente actividad) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6), // Reducido
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 32, // Reducido
+            height: 32, // Reducido
             decoration: BoxDecoration(
               color: const Color(0xFF264653).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               actividad.flutterIcon,
               color: const Color(0xFF264653),
-              size: 18,
+              size: 16, // Reducido
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10), // Reducido
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,15 +426,17 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
                 Text(
                   actividad.descripcion,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 12, // Reducido
                     color: Color(0xFF264653),
                   ),
+                  maxLines: 2, // Permitir 2 líneas máximo
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   actividad.fecha,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 10, // Reducido
                     color: Colors.grey,
                   ),
                 ),
@@ -441,7 +447,4 @@ class _DashboardResidentePageState extends State<DashboardResidentePage> {
       ),
     );
   }
-
-  // ❌ ELIMINADO: _buildQuickActions() y _buildActionButton()
-  // Ya no se necesitan porque las acciones están en el menú
 }

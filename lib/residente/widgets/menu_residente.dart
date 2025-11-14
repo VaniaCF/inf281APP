@@ -10,89 +10,94 @@ class MenuResidente extends StatelessWidget {
   Widget build(BuildContext context) {
     return Drawer(
       backgroundColor: const Color(0xFF264653),
-      child: ListView(
-        padding: EdgeInsets.zero,
+      child: Column(
         children: [
           // Header del drawer
           _buildHeader(context),
 
-          // Items del menú
-          _buildMenuItem(
-            icon: Icons.dashboard,
-            title: 'Dashboard',
-            onTap: () {
-              Navigator.pop(context); // Cerrar drawer
-              Navigator.pushNamedAndRemoveUntil(
-                  context, '/residente/dashboard', (route) => false);
-              onItemSelected();
-            },
-          ),
+          // Lista de opciones con Expanded para scroll
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _buildMenuItem(
+                  icon: Icons.dashboard,
+                  title: 'Dashboard',
+                  onTap: () {
+                    _navigateTo(context, '/residente/dashboard');
+                  },
+                ),
 
-          _buildMenuItem(
-            icon: Icons.confirmation_number,
-            title: 'Mis Tickets',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/residente/tickets');
-              onItemSelected();
-            },
-          ),
+                _buildMenuItem(
+                  icon: Icons.confirmation_number,
+                  title: 'Mis Tickets',
+                  onTap: () {
+                    _navigateTo(context, '/residente/tickets');
+                  },
+                ),
 
-          _buildMenuItem(
-            icon: Icons.calendar_today,
-            title: 'Mis Reservas',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/residente/reservas');
-              onItemSelected();
-            },
-          ),
+                _buildMenuItem(
+                  icon: Icons.calendar_today,
+                  title: 'Mis Reservas',
+                  onTap: () {
+                    _navigateTo(context, '/residente/reservas');
+                  },
+                ),
 
-          _buildMenuItem(
-            icon: Icons.receipt_long,
-            title: 'Facturación',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/residente/facturacion');
-              onItemSelected();
-            },
-          ),
+                _buildMenuItem(
+                  icon: Icons.policy,
+                  title: 'Políticas',
+                  onTap: () {
+                    _navigateTo(context, '/residente/politicas');
+                  },
+                ),
 
-          _buildMenuItem(
-            icon: Icons.policy,
-            title: 'Políticas',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/residente/politicas');
-              onItemSelected();
-            },
-          ),
+                _buildMenuItem(
+                  icon: Icons.person,
+                  title: 'Mi Perfil',
+                  onTap: () {
+                    _navigateTo(context, '/residente/perfil');
+                  },
+                ),
 
-          _buildMenuItem(
-            icon: Icons.person,
-            title: 'Mi Perfil',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/residente/perfil');
-              onItemSelected();
-            },
-          ),
+                // Divider antes de Cerrar Sesión
+                const Divider(color: Colors.white54, height: 1),
 
-          // Divider antes de Cerrar Sesión
-          const Divider(color: Colors.white54, height: 1),
-
-          // Cerrar Sesión
-          _buildMenuItem(
-            icon: Icons.logout,
-            title: 'Cerrar Sesión',
-            onTap: () {
-              Navigator.pop(context);
-              _showLogoutDialog(context);
-            },
+                // Cerrar Sesión
+                _buildMenuItem(
+                  icon: Icons.logout,
+                  title: 'Cerrar Sesión',
+                  onTap: () {
+                    _showLogoutDialog(context);
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
+
+  // 🔥 NUEVO MÉTODO: Navegación unificada
+  void _navigateTo(BuildContext context, String routeName) {
+    print('🎯 Navegando a: $routeName');
+
+    // 1. Cerrar el drawer primero
+    Navigator.pop(context);
+
+    // 2. Pequeño delay para asegurar que el drawer se cierre
+    Future.delayed(Duration(milliseconds: 100), () {
+      // 3. Navegar a la ruta
+      Navigator.pushNamed(context, routeName).then((_) {
+        print('✅ Navegación completada a: $routeName');
+      }).catchError((error) {
+        print('❌ Error en navegación: $error');
+      });
+    });
+
+    // 4. Ejecutar callback
+    onItemSelected();
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -147,12 +152,18 @@ class MenuResidente extends StatelessWidget {
       ),
       onTap: onTap,
       hoverColor: Colors.white.withOpacity(0.1),
+      // 🔥 AGREGAR FEEDBACK TÁCTIL
+      mouseCursor: SystemMouseCursors.click,
     );
   }
 
   void _showLogoutDialog(BuildContext context) {
+    // Cerrar drawer primero
+    Navigator.pop(context);
+
     showDialog(
       context: context,
+      barrierDismissible: true, // 🔥 PERMITIR TOCAR FUERA
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Cerrar Sesión'),

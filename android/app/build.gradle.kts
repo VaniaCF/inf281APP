@@ -28,6 +28,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // AGREGAR ESTO para image_picker
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -37,8 +40,21 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+    
+    // AGREGAR ESTA SECCIÓN
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 flutter {
     source = "../.."
+}
+
+// AGREGAR ESTAS DEPENDENCIAS SI NO EXISTEN
+dependencies {
+    // Para image_picker y compatibilidad
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.multidex:multidex:2.0.1")
 }

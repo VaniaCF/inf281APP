@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http; // ← AGREGAR ESTE IMPORT
 import '../services/login_service.dart';
-import '../services/captcha_widget.dart';
+import '../services/captcha_widget.dart'; // ← CaptchaWidget está en services
 import '/residente/pages/dashboard_residente.dart';
+import '../models/user_login.dart' as user_model;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -22,34 +24,73 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _testConnection();
-    _testAuth();
-    // Inicializar valores del CAPTCHA
+    print('🚀 INICIANDO LOGIN PAGE...');
+
+    // Inicializar primero los valores
     _captchaValue = '';
     _captchaId = '';
     _isCaptchaValid = false;
+
+    // Luego hacer las pruebas después de un pequeño delay
+    Future.delayed(Duration(milliseconds: 100), () {
+      _initTests();
+    });
   }
 
-  Future<void> _testAuth() async {
-    print('🧪 Probando endpoint de auth...');
-    await LoginService.testAuth();
+  Future<void> _initTests() async {
+    print('🔧 Ejecutando pruebas de inicialización...');
+
+    try {
+      // Test de conexión básica
+      print('1. Probando conexión básica...');
+      final connectionTest = await LoginService.testConnection();
+      print('🔍 Test conexión: $connectionTest');
+
+      // Test de auth endpoint
+      print('2. Probando auth endpoint...');
+      final authTest = await LoginService.testAuth();
+      print('🔍 Test auth: $authTest');
+
+      // Test CAPTCHA detallado
+      print('3. Probando CAPTCHA endpoint...');
+      await _testCaptchaDetailed();
+    } catch (e) {
+      print('❌ ERROR en pruebas de inicialización: $e');
+    }
+
+    print('✅ Pruebas de inicialización completadas');
   }
 
-  Future<void> _testConnection() async {
-    await LoginService.testConnection();
+  Future<void> _testCaptchaDetailed() async {
+    print('🧪 DIAGNÓSTICO CAPTCHA DETALLADO...');
+
+    try {
+      // Test directo HTTP
+      print('📡 Test 1: HTTP directo al endpoint...');
+      final response = await http.get(
+        Uri.parse(
+            'http://192.168.0.153:5000/api/auth/captcha'), /////////////////////////////////////////////////////////////
+        headers: {'Content-Type': 'application/json'},
+      );
+      print('🔍 Status Code: ${response.statusCode}');
+      print('🔍 Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('✅ Endpoint CAPTCHA funciona correctamente');
+      } else {
+        print('❌ Endpoint CAPTCHA devuelve error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ ERROR en test CAPTCHA HTTP: $e');
+    }
+
+    print('🧪 DIAGNÓSTICO CAPTCHA COMPLETADO');
   }
 
   Future<void> _login() async {
-    print('🔐 Intentando login...');
-    print('📧 Email: ${_emailController.text}');
-    print('🔑 Password: ${_passwordController.text}');
-    print('📝 CAPTCHA Value: $_captchaValue');
-    print('🆔 CAPTCHA ID: $_captchaId');
-    print('✅ CAPTCHA Válido: $_isCaptchaValid');
+    print('🔐 Intentando login REAL...');
 
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      print('❌ Campos vacíos');
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor completa todos los campos'),
@@ -60,8 +101,6 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     if (!_isCaptchaValid) {
-      print('❌ CAPTCHA no válido');
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor completa el CAPTCHA correctamente'),
@@ -76,14 +115,14 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final userLogin = UserLogin(
+      final userLogin = user_model.UserLogin(
         correo: _emailController.text,
         password: _passwordController.text,
         captcha: _captchaValue,
         captchaId: _captchaId,
       );
 
-      print('🔄 Llamando a LoginService.login...');
+      print('🔄 Llamando a LoginService.login (MODO REAL)...');
       final response = await LoginService.login(userLogin);
 
       print('🔍 Login response recibida: $response');
@@ -94,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (response['success'] == true) {
-        print('✅ Login exitoso en Flutter');
+        print('✅ Login exitoso en Flutter (BASE DE DATOS REAL)');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(response['message'] ?? 'Login exitoso'),
@@ -104,16 +143,23 @@ class _LoginPageState extends State<LoginPage> {
 
         final userData = response['user'];
         if (userData != null) {
-          print('🔄 Redirigiendo por rol: ${userData['id_rol']}');
+          print('🔄 Redirigiendo por rol REAL: ${userData['id_rol']}');
           _redirectByRole(userData['id_rol']);
         } else {
           print('❌ User data es null');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Error: Datos de usuario no recibidos'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       } else {
         print('❌ Login falló: ${response['message']}');
+        // MOSTRAR ERROR REAL, NO USAR MODO DEMO
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(response['message'] ?? 'Error desconocido'),
+            content: Text(response['message'] ?? 'Error en el login'),
             backgroundColor: Colors.red,
           ),
         );
@@ -147,8 +193,7 @@ class _LoginPageState extends State<LoginPage> {
         roleName = 'Empleado';
         break;
       case 3:
-        route =
-            '/residente/dashboard'; // ← CORREGIDO: de '/residentes/dashboard' a '/residente/dashboard'
+        route = '/residente/dashboard';
         roleName = 'Residente';
         break;
       default:
@@ -271,7 +316,9 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // WIDGET CAPTCHA INTEGRADO
+
+                        // ✅ WIDGET CAPTCHA CORRECTO - ELIMINA EL CÓDIGO DUPLICADO
+                        // En el build method, usa:
                         CaptchaWidget(
                           onCaptchaVerified: (captchaValue, captchaId) {
                             setState(() {
@@ -284,7 +331,9 @@ class _LoginPageState extends State<LoginPage> {
                               _isCaptchaValid = isValid;
                             });
                           },
+                          // ← Cambia a false para texto, true para matemáticas
                         ),
+
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
