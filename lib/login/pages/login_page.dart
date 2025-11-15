@@ -189,7 +189,7 @@ class _LoginPageState extends State<LoginPage> {
         roleName = 'Administrador';
         break;
       case 2:
-        route = '/empleados/dashboard';
+        route = '/empleado/dashboard';
         roleName = 'Empleado';
         break;
       case 3:

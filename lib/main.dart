@@ -1,12 +1,15 @@
-// lib/main.dart - VERSIÓN CORREGIDA CON TICKETS
+// lib/main.dart - SOLO EMPLEADO (con la nueva ruta de pagos)
 import 'package:flutter/material.dart';
 import 'login/pages/login_page.dart';
 import 'admin/pages/dashboard_admin.dart';
 import 'empleado/pages/dashboard_empleado.dart';
+import 'empleado/pages/mantenimientos_empleado.dart';
+import 'empleado/pages/pagos_empleado.dart'; // ✅ NUEVA IMPORTACIÓN
+import 'empleado/pages/perfil_empleado.dart';
 import 'residente/pages/dashboard_residente.dart';
 import 'residente/pages/politicas_residente.dart';
 import 'residente/pages/reservas_residente.dart';
-import 'residente/pages/tickets_residente.dart' as tickets; // ✅ USAR ALIAS
+import 'residente/pages/tickets_residente.dart' as tickets;
 import 'residente/pages/perfil_residente.dart';
 
 void main() {
@@ -72,36 +75,33 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/admin/dashboard': (context) => const DashboardAdmin(),
-        '/empleados/dashboard': (context) => const DashboardEmpleado(),
 
-        // RUTAS PARA RESIDENTE - CORREGIDAS
+        // ✅ RUTAS DEL EMPLEADO - ACTUALIZADAS
+        '/empleado/dashboard': (context) => const DashboardEmpleado(),
+        '/empleado/mantenimientos': (context) => const MantenimientoEmpleado(),
+        '/empleado/pagos': (context) => const PagosEmpleado(), // ✅ RUTA NUEVA
+        '/empleado/perfil': (context) => const PerfilEmpleadoPage(),
+
+        // RUTAS DEL RESIDENTE (EXISTENTES - NO MODIFICAR)
         '/residente/dashboard': (context) => const DashboardResidentePage(),
-        '/residente/tickets': (context) =>
-            const tickets.TicketsResidentePage(), // ✅ USAR ALIAS
+        '/residente/tickets': (context) => const tickets.TicketsResidentePage(),
         '/residente/tickets/crear': (context) =>
-            const tickets.CrearTicketPage(), // ✅ USAR ALIAS
-        '/residente/reservas': (context) =>
-            const ReservasResidentePage(), // ✅ ESTA ESTÁ BIEN
+            const tickets.CrearTicketPage(),
+        '/residente/reservas': (context) => const ReservasResidentePage(),
         '/residente/facturacion': (context) =>
             _buildPlaceholderPage('Facturación'),
         '/residente/politicas': (context) => const PoliticaResidentePage(),
         '/residente/perfil': (context) => const PerfilResidenteScreen(),
       },
-      // Agregar manejo de rutas para tickets con parámetros
       onGenerateRoute: (settings) {
-        // Manejar rutas con parámetros para tickets
         if (settings.name == '/residente/tickets/detalle') {
           final ticketId = settings.arguments as int;
           return MaterialPageRoute(
-            builder: (context) =>
-                tickets.DetalleTicketPage(ticketId: ticketId), // ✅ USAR ALIAS
+            builder: (context) => tickets.DetalleTicketPage(ticketId: ticketId),
           );
         }
-
-        // Si no coincide con ninguna ruta especial, usar el manejador por defecto
         return null;
       },
-      // Agregar manejo de rutas desconocidas para debug
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
           builder: (context) => Scaffold(
