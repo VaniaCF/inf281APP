@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
-import 'login/pages/login_page.dart';
-import 'admin/pages/dashboard_admin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert'; 
-import 'login/services/login_service.dart'; // ✅ IMPORTAR EL SERVICIO
+
+// Importar páginas de login
+import 'login/pages/login_page.dart';
+import 'login/services/login_service.dart';
+
+// Importar páginas de admin
+import 'admin/pages/dashboard_admin.dart';
+import 'admin/pages/comunicados_admin.dart';
+import 'admin/pages/finanzas_admin.dart';
+import 'admin/pages/pagos_admin.dart';
+import 'admin/pages/reservas_admin.dart';
+import 'admin/pages/tickets_admin.dart';
 
 void main() {
   runApp(const MyApp());
@@ -68,6 +77,11 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/admin/dashboard': (context) => const DashboardAdmin(),
+        '/admin/comunicados': (context) => const ComunicadosAdmin(),
+        '/admin/finanzas': (context) => const FinanzasAdmin(),
+        '/admin/pagos': (context) => const PagosAdmin(),
+        '/admin/reservas': (context) => const ReservasAdmin(),
+        '/admin/tickets': (context) => const TicketsAdmin(),
       },
       onUnknownRoute: (settings) {
         return MaterialPageRoute(

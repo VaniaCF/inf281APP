@@ -1,345 +1,466 @@
-// admin/pages/dashboard_admin.dart
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../login/services/login_service.dart';
 
-class DashboardAdmin extends StatefulWidget {
+// Importar las páginas desde el mismo directorio
+import 'comunicados_admin.dart';
+import 'finanzas_admin.dart';
+import 'pagos_admin.dart';
+import 'reservas_admin.dart';
+import 'tickets_admin.dart';
+
+class DashboardAdmin extends StatelessWidget {
   const DashboardAdmin({super.key});
-
-  @override
-  State<DashboardAdmin> createState() => _DashboardAdminState();
-}
-
-class _DashboardAdminState extends State<DashboardAdmin> {
-  Map<String, dynamic> _dashboardData = {};
-  bool _isLoading = true;
-  String _errorMessage = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDashboardData();
-  }
-
-  Future<void> _loadDashboardData() async {
-  try {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
-
-    print('🔗 Conectando a: http://192.168.1.12:5000/admin/api/dashboard');
-    
-    final response = await http.get(
-      Uri.parse('http://192.168.1.12:5000/admin/api/dashboard'),
-      headers: LoginService.getAuthHeaders(),
-    );
-
-    print('📊 Response status: ${response.statusCode}');
-    print('📊 Response headers: ${response.headers}');
-    print('📊 Response body: ${response.body}');
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      
-      if (data['success'] == true) {
-        setState(() {
-          _dashboardData = data['data'] ?? {};
-          _isLoading = false;
-        });
-        print('✅ Datos REALES del dashboard cargados correctamente');
-      } else {
-        throw Exception(data['error'] ?? 'Error desconocido del servidor');
-      }
-    } else if (response.statusCode == 500) {
-      // ✅ OBTENER MÁS DETALLES DEL ERROR 500
-      final errorData = json.decode(response.body);
-      throw Exception('Error interno del servidor: ${errorData['error'] ?? 'Desconocido'}');
-    } else if (response.statusCode == 401) {
-      throw Exception('No autenticado. Por favor, inicia sesión nuevamente.');
-    } else if (response.statusCode == 403) {
-      throw Exception('Acceso no autorizado. No tienes permisos de administrador.');
-    } else {
-      throw Exception('Error del servidor: ${response.statusCode}');
-    }
-  } catch (e) {
-    print('❌ Error cargando dashboard: $e');
-    setState(() {
-      _isLoading = false;
-      _errorMessage = e.toString();
-    });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-}
-
-  // Método para probar diferentes URLs (temporal para debug)
-  Future<void> _testAllUrls() async {
-    final urls = [
-      'http://192.168.1.12:5000/admin/api/dashboard',    // ✅ Esta debería funcionar
-      'http://192.168.1.12:5000/api/protected/dashboard', // Endpoint directo en app.py
-      'http://192.168.1.12:5000/api/dashboard',           // ❌ Sin prefijo (404)
-    ];
-
-    for (final url in urls) {
-      try {
-        print('🔍 Probando URL: $url');
-        final response = await http.get(
-          Uri.parse(url),
-          headers: LoginService.getAuthHeaders(),
-        );
-        print('📊 $url → Status: ${response.statusCode}');
-        if (response.statusCode == 200) {
-          print('🎯 URL CORRECTA ENCONTRADA: $url');
-          break;
-        }
-      } catch (e) {
-        print('❌ $url → Error: $e');
-      }
-    }
-  }
-
-  Widget _buildStatCard(String title, dynamic value, Color color, IconData icon) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, size: 40, color: color),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value?.toString() ?? '0',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('Dashboard Administrador'),
+        title: const Text('Panel de Administración'),
         backgroundColor: const Color(0xFF264653),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadDashboardData,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
           ),
-          IconButton(
-            icon: const Icon(Icons.bug_report), // ✅ Botón para debug
-            onPressed: _testAllUrls,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-          ),
-        ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage.isNotEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Text(
-                          _errorMessage,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _loadDashboardData,
-                        child: const Text('Reintentar'),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: _testAllUrls, // ✅ Botón para debug
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                        ),
-                        child: const Text('Probar URLs'),
-                      ),
-                    ],
-                  ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Título
-                      Text(
-                        'Estadísticas del Sistema',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: const Color(0xFF264653),
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Resumen general de la plataforma',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Grid de estadísticas
-                      Expanded(
-                        child: GridView(
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 0.8,
-                          ),
-                          children: [
-                            _buildStatCard(
-                              'Total Usuarios',
-                              _dashboardData['total_usuarios'],
-                              const Color(0xFF264653),
-                              Icons.people,
-                            ),
-                            _buildStatCard(
-                              'Tickets Pendientes',
-                              _dashboardData['tickets_pendientes'],
-                              Colors.orange,
-                              Icons.support_agent,
-                            ),
-                            _buildStatCard(
-                              'Tickets Urgentes',
-                              _dashboardData['tickets_urgentes'],
-                              Colors.red,
-                              Icons.warning,
-                            ),
-                            _buildStatCard(
-                              'Total Tickets',
-                              _dashboardData['total_tickets'],
-                              Colors.blue,
-                              Icons.list_alt,
-                            ),
-                            _buildStatCard(
-                              'Reservas Activas',
-                              _dashboardData['reservas_activas'],
-                              Colors.green,
-                              Icons.calendar_today,
-                            ),
-                            _buildStatCard(
-                              'Reservas Hoy',
-                              _dashboardData['reservas_hoy'],
-                              Colors.purple,
-                              Icons.event_available,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Información adicional
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Información del Sistema',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Última actualización: ${DateTime.now().toString()}',
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                              const SizedBox(height: 8),
-                              if (_dashboardData['ingresos_mensuales'] != null)
-                                Text(
-                                  'Ingresos mensuales: \$${_dashboardData['ingresos_mensuales']}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              if (_dashboardData['nuevos_usuarios_mes'] != null)
-                                Text(
-                                  'Nuevos usuarios este mes: ${_dashboardData['nuevos_usuarios_mes']}',
-                                  style: const TextStyle(color: Colors.blue),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+      drawer: _buildDrawer(context),
+      body: _buildDashboardContent(context), // Pasar context aquí
     );
   }
 
-  Future<void> _logout() async {
-    try {
-      // Cerrar sesión en el servidor
-      final response = await http.post(
-        Uri.parse('http://192.168.1.12:5000/api/auth/logout'),
-        headers: LoginService.getAuthHeaders(),
-      );
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          _buildDrawerHeader(),
+          _buildDrawerItem(
+            context,
+            icon: Icons.dashboard,
+            title: 'Dashboard',
+            onTap: () {
+              Navigator.pop(context); // Cerrar drawer
+            },
+          ),
+          _buildDrawerItem(
+            context,
+            icon: Icons.announcement,
+            title: 'Comunicados',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ComunicadosAdmin()),
+              );
+            },
+          ),
+          _buildDrawerItem(
+            context,
+            icon: Icons.attach_money,
+            title: 'Finanzas',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const FinanzasAdmin()),
+              );
+            },
+          ),
+          _buildDrawerItem(
+            context,
+            icon: Icons.payment,
+            title: 'Pagos',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PagosAdmin()),
+              );
+            },
+          ),
+          _buildDrawerItem(
+            context,
+            icon: Icons.calendar_today,
+            title: 'Reservas',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ReservasAdmin()),
+              );
+            },
+          ),
+          _buildDrawerItem(
+            context,
+            icon: Icons.support_agent,
+            title: 'Tickets',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TicketsAdmin()),
+              );
+            },
+          ),
+          _buildDrawerItem(
+            context,
+            icon: Icons.analytics,
+            title: 'Reportes',
+            onTap: () {
+              Navigator.pop(context);
+              _showComingSoon(context);
+            },
+          ),
+          const Divider(),
+          _buildDrawerItem(
+            context,
+            icon: Icons.settings,
+            title: 'Configuración',
+            onTap: () {
+              Navigator.pop(context);
+              _showComingSoon(context);
+            },
+          ),
+          _buildDrawerItem(
+            context,
+            icon: Icons.help,
+            title: 'Ayuda',
+            onTap: () {
+              Navigator.pop(context);
+              _showComingSoon(context);
+            },
+          ),
+          _buildDrawerItem(
+            context,
+            icon: Icons.logout,
+            title: 'Cerrar Sesión',
+            onTap: () => _logout(context),
+          ),
+        ],
+      ),
+    );
+  }
 
-      // Limpiar datos locales sin importar la respuesta del servidor
-      await LoginService.logout();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('is_logged_in');
-      await prefs.remove('user_data');
+  Widget _buildDrawerHeader() {
+    return DrawerHeader(
+      decoration: BoxDecoration(
+        color: const Color(0xFF264653),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF264653).withOpacity(0.9),
+            const Color(0xFF2A9D8F),
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          const CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.white,
+            child: Icon(
+              Icons.person,
+              size: 40,
+              color: Color(0xFF264653),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Administrador',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'admin@edificio.com',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-      // Navegar al login
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    } catch (e) {
-      print('❌ Error en logout: $e');
-      // Limpiar datos locales incluso si hay error
-      await LoginService.logout();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('is_logged_in');
-      await prefs.remove('user_data');
-      
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
+  Widget _buildDrawerItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: const Color(0xFF264653),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Color(0xFF264653),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: Color(0xFF264653),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildDashboardContent(BuildContext context) { // Recibir context como parámetro
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header de bienvenida
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF264653).withOpacity(0.9),
+                    const Color(0xFF2A9D8F),
+                  ],
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '¡Bienvenido!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Panel de administración del edificio',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildStatsRow(),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Accesos rápidos
+          const Text(
+            'Accesos Rápidos',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF264653),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.3,
+              children: [
+                _buildQuickAccessCard(
+                  'Comunicados',
+                  Icons.announcement,
+                  const Color(0xFF264653),
+                  () {
+                    Navigator.push(
+                      context, // ✅ Context disponible aquí
+                      MaterialPageRoute(builder: (context) => const ComunicadosAdmin()),
+                    );
+                  },
+                ),
+                _buildQuickAccessCard(
+                  'Finanzas',
+                  Icons.attach_money,
+                  const Color(0xFF2A9D8F),
+                  () {
+                    Navigator.push(
+                      context, // ✅ Context disponible aquí
+                      MaterialPageRoute(builder: (context) => const FinanzasAdmin()),
+                    );
+                  },
+                ),
+                _buildQuickAccessCard(
+                  'Pagos',
+                  Icons.payment,
+                  const Color(0xFFE9C46A),
+                  () {
+                    Navigator.push(
+                      context, // ✅ Context disponible aquí
+                      MaterialPageRoute(builder: (context) => const PagosAdmin()),
+                    );
+                  },
+                ),
+                _buildQuickAccessCard(
+                  'Reservas',
+                  Icons.calendar_today,
+                  const Color(0xFFF4A261),
+                  () {
+                    Navigator.push(
+                      context, // ✅ Context disponible aquí
+                      MaterialPageRoute(builder: (context) => const ReservasAdmin()),
+                    );
+                  },
+                ),
+                _buildQuickAccessCard(
+                  'Tickets',
+                  Icons.support_agent,
+                  const Color(0xFFE76F51),
+                  () {
+                    Navigator.push(
+                      context, // ✅ Context disponible aquí
+                      MaterialPageRoute(builder: (context) => const TicketsAdmin()),
+                    );
+                  },
+                ),
+                _buildQuickAccessCard(
+                  'Reportes',
+                  Icons.analytics,
+                  const Color(0xFF6A4C93),
+                  () {
+                    _showComingSoon(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _buildStatItem('12', 'Comunicados'),
+        _buildStatItem('8', 'Pagos Pend.'),
+        _buildStatItem('5', 'Reservas Hoy'),
+        _buildStatItem('3', 'Tickets Act.'),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickAccessCard(
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: color.withOpacity(0.1),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 32,
+                color: color,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Próximamente...'),
+        backgroundColor: Color(0xFF264653),
+      ),
+    );
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('is_logged_in');
+    await prefs.remove('user_data');
+    
+    if (context.mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
     }
   }
 }
